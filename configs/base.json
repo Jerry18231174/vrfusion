@@ -1,0 +1,20 @@
+{
+    "dataset": {
+        "name": "garden",
+        "type": "colmap",
+        "rays_per_batch": 16384,
+        "shuffle_seed": 12464,
+        "split_ratio": 0.875
+    },
+    "model": {
+        "type": "instant-ngp",
+        "learning_rate": 0.001,
+        "training_steps": 30000,
+        "seed": 0
+    },
+    "train": {
+        "batch_size": 1,
+        "num_workers": 4,
+        "pin_memory": true
+    }
+}
