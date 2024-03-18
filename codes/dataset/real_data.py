@@ -123,8 +123,9 @@ class ColmapDataset(NeRFDataset):
         self.dataset_size = self.shuffled_indices.shape[0]
         poses = poses[self.shuffled_indices]
         bounds = bounds[self.shuffled_indices]
+        # Scale the bounds
         bounds[:, 0] = bounds[:, 0] * 0.9
-        bounds[:, 1] = bounds[:, 1] * 0.9
+        # bounds[:, 1] = bounds[:, 1] * 0.9
         # Extract camera attributes
         cam_attrs = {
             "height": poses[0, 0, 4] / self.scale_ratio,

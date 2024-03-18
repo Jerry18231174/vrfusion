@@ -92,9 +92,10 @@ class SpacedSampler(Sampler):
         def spacing_to_euclidean_fn(x):
             return self.spacing_fn_inv(x * s_far + (1 - x) * s_near)
 
-        euclidean_offsets = spacing_to_euclidean_fn(offsets)  # [num_rays, num_samples]
+        s_offsets = offsets
+        t_offsets = spacing_to_euclidean_fn(offsets)  # [num_rays, num_samples]
 
-        ray_samples = ray_bundle.get_samples_from_offsets(euclidean_offsets, euclidean_offset=True)
+        ray_samples = ray_bundle.get_samples_from_offsets(t_offsets, s_offsets, s2t_fn=spacing_to_euclidean_fn)
 
         return ray_samples
 
@@ -212,20 +213,22 @@ class PDFSampler(Sampler):
         idx_left = torch.clamp(indices - 1, 0, num_samples_dist - 1)
         cdf_left = torch.gather(cdf, -1, idx_left)
         cdf_right = torch.gather(cdf, -1, idx_right)
-        offsets_left = torch.gather(ray_samples.offsets, -1, idx_left)
-        offsets_right = torch.gather(ray_samples.offsets, -1, idx_right)
+        offsets_left = torch.gather(ray_samples.s_offsets, -1, idx_left)
+        offsets_right = torch.gather(ray_samples.s_offsets, -1, idx_right)
 
         # Linearly interpolate the offsets
         t = torch.clip(torch.nan_to_num((u - cdf_left) / (cdf_right - cdf_left)), 0.0, 1.0)
-        euclidean_offsets = offsets_left + t * (offsets_right - offsets_left)
+        s_offsets = offsets_left + t * (offsets_right - offsets_left)
 
         if self.include_orginal:
-            euclidean_offsets, _ = torch.sort(torch.cat([euclidean_offsets, ray_samples.offsets], dim=-1), dim=-1)
+            s_offsets, _ = torch.sort(torch.cat([s_offsets, ray_samples.s_offsets], dim=-1), dim=-1)
         
         # Stop gradients
-        euclidean_offsets = euclidean_offsets.detach()
+        s_offsets = s_offsets.detach()
 
-        ray_samples = ray_bundle.get_samples_from_offsets(euclidean_offsets, euclidean_offset=True)
+        t_offsets = ray_samples.s2t_fn(s_offsets)
+
+        ray_samples = ray_bundle.get_samples_from_offsets(t_offsets, s_offsets, s2t_fn=ray_samples.s2t_fn)
 
         return ray_samples
 

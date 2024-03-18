@@ -16,7 +16,7 @@ def train(config):
 def train_nerf(config):
     train_schedual = {
         "eval_every": config["model"]["eval_every"] if "eval_every" in config["model"] else 1000,
-        "save_every": config["model"]["save_every"] if "save_every" in config["model"] else 1000,
+        "save_every": config["model"]["save_every"] if "save_every" in config["model"] else 10000,
     }
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -60,6 +60,8 @@ def train_nerf(config):
             ray_batch.to(device)
             pred_ray = model(ray_batch)
             loss = torch.mean((pred_ray["rgb"] - ray_batch.rgb) ** 2)
+            loss += pred_ray["prop_loss"]
+            # loss += pred_ray["dist_loss"]
             loss.backward()
             optimizer.step()
             # Evaluate the model
@@ -76,9 +78,9 @@ def train_nerf(config):
                         pred_rgb = pred_rgb.view(eval_dataset.cameras.height, eval_dataset.cameras.width, -1)
                         pred_rgb = (pred_rgb.cpu().numpy() * 255).astype(np.uint8)
                         save_numpy_image(pred_rgb, os.path.join(output_dir, f"eval_{i+1}_{j+1}.png"))
-                        gt_rgb = eval_ray_batch.rgb.view(eval_dataset.cameras.height, eval_dataset.cameras.width, -1)
-                        gt_rgb = (gt_rgb.cpu().numpy() * 255).astype(np.uint8)
-                        save_numpy_image(gt_rgb, os.path.join(output_dir, f"gt_{i+1}_{j+1}.png"))
+                        # gt_rgb = eval_ray_batch.rgb.view(eval_dataset.cameras.height, eval_dataset.cameras.width, -1)
+                        # gt_rgb = (gt_rgb.cpu().numpy() * 255).astype(np.uint8)
+                        # save_numpy_image(gt_rgb, os.path.join(output_dir, f"gt_{i+1}_{j+1}.png"))
                         break
                 model.train()
             # Save the model
